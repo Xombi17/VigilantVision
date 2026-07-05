@@ -113,6 +113,20 @@ def get_incidents(limit=100):
 # ---------------------------------------------------------------------------
 # JSON-safe serialization (numpy types break json.dumps)
 # ---------------------------------------------------------------------------
+class _NumpyEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles all numpy numeric types."""
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+
 def _py(val):
     """Convert numpy values to native Python types (json.dumps can't handle numpy)."""
     if isinstance(val, np.generic):
@@ -120,6 +134,12 @@ def _py(val):
     if isinstance(val, np.ndarray):
         return val.tolist()
     return val
+
+
+async def _send_json(ws, data):
+    """Send JSON over WebSocket with numpy-safe encoding.
+    Replaces ws.send_json() to avoid float32/float64 serialization crashes."""
+    await ws.send_text(json.dumps(data, cls=_NumpyEncoder))
 
 
 # ---------------------------------------------------------------------------
@@ -244,8 +264,8 @@ def create_app(video_source="webcam", model_path=None,
 
         cap = cv2.VideoCapture(cap_source)
         if not cap.isOpened():
-            await ws.send_json({"type": "error",
-                                "message": f"Cannot open source: {source_label}"})
+            await _send_json(ws, {"type": "error",
+                              "message": f"Cannot open source: {source_label}"})
             await ws.close()
             return
 
@@ -253,7 +273,7 @@ def create_app(video_source="webcam", model_path=None,
         w   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        await ws.send_json({
+        await _send_json(ws, {
             "type": "info",
             "fps": _py(round(fps, 1)), "width": w, "height": h,
             "source": source_label,
@@ -306,7 +326,7 @@ def create_app(video_source="webcam", model_path=None,
                             continue
                         else:
                             try:
-                                await ws.send_json({"type": "video_end"})
+                                await _send_json(ws, {"type": "video_end"})
                             except Exception:
                                 pass
                             await ws.close()
@@ -503,7 +523,7 @@ def create_app(video_source="webcam", model_path=None,
                                       [cv2.IMWRITE_JPEG_QUALITY, jpeg_quality])
                 try:
                     await ws.send_bytes(buf.tobytes())
-                    await ws.send_json({
+                    await _send_json(ws, {
                         "type": "frame",
                         "frame_idx": frame_idx,
                         "processing_ms": _py(round(avg_ms, 1)),
