@@ -1,0 +1,40 @@
+{
+  "version": "1.42.3",
+  "project": "VigilantVision",
+  "mode": "interactive",
+  "granularity": "standard",
+  "workflow": {
+    "research": true,
+    "plan_verification": true,
+    "security": {
+      "enabled": true,
+      "asvs_level": 1,
+      "block_on": ["high"]
+    },
+    "auto_advance": false
+  },
+  "parallelization": {
+    "enabled": true,
+    "max_agents": 3,
+    "min_plans_for_parallel": 2
+  },
+  "gates": {
+    "phase": true,
+    "roadmap": true,
+    "task_breakdown": true,
+    "plan": true,
+    "technical_transition": true
+  },
+  "safety": {
+    "confirm_destructive": true,
+    "confirm_external_services": true,
+    "context_warnings": true
+  },
+  "git": {
+    "auto_tag": true,
+    "include_docs_in_commits": true
+  },
+  "planning": {
+    "project_doc_path": "CLAUDE.md"
+  }
+}

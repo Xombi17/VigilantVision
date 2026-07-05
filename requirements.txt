@@ -1,0 +1,16 @@
+# Core Vision & ML
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Web Dashboard
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Classifier Training
+scikit-learn>=1.3.0
+
+# Optional / Stretch Goals
+# torch>=2.0.0         # Included with ultralytics
+# onnx>=1.14.0         # For model export (stretch)
+# onnxruntime-gpu>=1.15.0  # For FP16 inference (stretch)

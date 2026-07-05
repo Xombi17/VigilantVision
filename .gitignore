@@ -1,0 +1,44 @@
+# --- Datasets & Archives ---
+# UCF-Crime is massive (~103GB compressed). NEVER commit.
+UCF_Crimes.zip
+dataset.zip
+
+# Extracted dataset (6GB+)
+dataset/
+
+# --- Generated / Output Files ---
+# Feature extraction output (generated, can be recreated)
+features.csv
+
+# --- Python Environment ---
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+
+# --- Pre-trained Weights ---
+# Downloaded on first run by Ultralytics; reproducible
+*.pt
+
+# --- IDE & OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- GSD Planning Artifacts ---
+# Keep the planning docs but ignore potential stale locks
+.planning/todos/
+
+# --- Misc ---
+*.log
+*.tmp
+dist/
+build/
+*.egg-info/
