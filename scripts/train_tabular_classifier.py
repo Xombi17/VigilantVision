@@ -241,7 +241,14 @@ def main():
 
     # Retrain on full data for final deployment-ready model
     print("Retraining on full dataset for deployment...")
-    X_scaled_full = scaler.fit_transform(X)
+
+    # Impute NaN using global column mean (acceptable for final model, no leakage concern)
+    col_mean_full = np.nanmean(X[:, 1])
+    X_full = X.copy()
+    X_full[:, 1] = np.nan_to_num(X_full[:, 1], nan=col_mean_full)
+    print(f"Imputed NaN with global column mean: {col_mean_full:.4f}")
+
+    X_scaled_full = scaler.fit_transform(X_full)
     final_model = LogisticRegression(
         C=args.C,
         class_weight="balanced",
