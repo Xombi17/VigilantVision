@@ -95,7 +95,7 @@ def log_incident(video_source, frame_idx, track_id, confidence, feat_dict):
         "VALUES (?,?,?,?,?,?)",
         (datetime.now(timezone.utc).isoformat(),
          str(video_source), frame_idx, track_id,
-         float(confidence), json.dumps(feat_dict)),
+         float(confidence), json.dumps(feat_dict, cls=_NumpyEncoder)),
     )
     conn.commit()
     conn.close()
