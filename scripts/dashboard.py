@@ -30,6 +30,9 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+# Suppress Ultralytics auto-install (prevents PermissionError spam on system Python)
+os.environ["ULTRALYTICS_DISABLE_AUTOINSTALL"] = "1"
+
 import cv2
 import numpy as np
 import uvicorn
