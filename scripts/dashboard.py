@@ -255,7 +255,7 @@ def create_app(video_source="webcam", model_path=None,
 
         await ws.send_json({
             "type": "info",
-            "fps": round(fps, 1), "width": w, "height": h,
+            "fps": _py(round(fps, 1)), "width": w, "height": h,
             "source": source_label,
             "threshold": threshold,
             "frame_interval": frame_interval,
@@ -298,15 +298,23 @@ def create_app(video_source="webcam", model_path=None,
             nonlocal current_threshold, jpeg_quality, _connected
 
             while True:
-                ret, frame = cap.read()
-                if not ret:
-                    if isinstance(cap_source, int):
-                        await asyncio.sleep(0.01)
-                        continue
-                    else:
-                        await ws.send_json({"type": "video_end"})
-                        await ws.close()
-                        break
+                try:
+                    ret, frame = cap.read()
+                    if not ret:
+                        if isinstance(cap_source, int):
+                            await asyncio.sleep(0.01)
+                            continue
+                        else:
+                            try:
+                                await ws.send_json({"type": "video_end"})
+                            except Exception:
+                                pass
+                            await ws.close()
+                            break
+
+                except Exception as e:
+                    print(f"  Stream error (exiting): {e}")
+                    break
 
                 frame_idx += 1
                 if frame_idx % frame_interval != 0:
