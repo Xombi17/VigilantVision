@@ -108,6 +108,18 @@ def get_incidents(limit=100):
 
 
 # ---------------------------------------------------------------------------
+# JSON-safe serialization (numpy types break json.dumps)
+# ---------------------------------------------------------------------------
+def _py(val):
+    """Convert numpy values to native Python types (json.dumps can't handle numpy)."""
+    if isinstance(val, np.generic):
+        return val.item()
+    if isinstance(val, np.ndarray):
+        return val.tolist()
+    return val
+
+
+# ---------------------------------------------------------------------------
 # Drawing utilities
 # ---------------------------------------------------------------------------
 def _dist(p1, p2):
@@ -364,11 +376,11 @@ def create_app(video_source="webcam", model_path=None,
 
                         persons.append({
                             "track_id": tid,
-                            "confidence": round(confidence, 4),
+                            "confidence": _py(round(confidence, 4)),
                             "features": {
-                                "wtt": round(wtt, 3),
-                                "wti": round(wti, 3),
-                                "ni":  ni,
+                                "wtt": _py(round(wtt, 3)),
+                                "wti": _py(round(wti, 3)),
+                                "ni":  _py(ni),
                             },
                         })
 
@@ -433,7 +445,7 @@ def create_app(video_source="webcam", model_path=None,
                 proc_times.append(dt_ms)
                 if len(proc_times) > 30:
                     proc_times.pop(0)
-                avg_ms = np.mean(proc_times)
+                avg_ms = float(np.mean(proc_times)) if proc_times else 0.0
 
                 # ---- Encode & send ---------------------------------------
                 _, buf = cv2.imencode(".jpg", annotated,
@@ -442,10 +454,10 @@ def create_app(video_source="webcam", model_path=None,
                 await ws.send_json({
                     "type": "frame",
                     "frame_idx": frame_idx,
-                    "processing_ms": round(avg_ms, 1),
+                    "processing_ms": _py(round(avg_ms, 1)),
                     "num_persons": len(persons),
                     "persons": persons,
-                    "max_confidence": round(max_conf, 4),
+                    "max_confidence": _py(round(max_conf, 4)),
                     "alert": any_alert,
                 })
 
