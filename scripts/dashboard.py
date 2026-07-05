@@ -27,7 +27,7 @@ import argparse
 import asyncio
 import sqlite3
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import cv2
@@ -89,7 +89,7 @@ def log_incident(video_source, frame_idx, track_id, confidence, feat_dict):
     conn.execute(
         "INSERT INTO incidents (timestamp, video_source, frame_idx, track_id, confidence, features) "
         "VALUES (?,?,?,?,?,?)",
-        (datetime.now().isoformat(),
+        (datetime.now(timezone.utc).isoformat(),
          str(video_source), frame_idx, track_id,
          float(confidence), json.dumps(feat_dict)),
     )
@@ -219,10 +219,36 @@ def create_app(video_source="webcam", model_path=None,
         proc_times = []
         alert_cooldown = 0
         recent_incidents = set()  # dedup: (track_id, bucket_of_50_frames)
+        current_threshold = threshold  # mutable local, can be updated via WS messages
+        jpeg_quality = 78  # mutable local, can be updated via WS messages
 
-        try:
-            while True:
-                ret, frame = cap.read()
+        async def recv_loop():
+            """Background task that reads control messages from the client."""
+            nonlocal current_threshold, jpeg_quality
+            try:
+                while True:
+                    raw = await ws.receive_text()
+                    msg = json.loads(raw)
+                    cmd = msg.get("cmd", "")
+                    if cmd == "set_threshold":
+                        val = float(msg["value"])
+                        current_threshold = max(0.0, min(1.0, val))
+                        print(f"  Threshold updated → {current_threshold:.2f}")
+                    elif cmd == "set_quality":
+                        val = int(msg["value"])
+                        jpeg_quality = max(10, min(100, val))
+                        print(f"  JPEG quality updated → {jpeg_quality}")
+            except (WebSocketDisconnect, Exception):
+                pass
+
+        async def stream_loop():
+            """Main loop: read frames, process, send."""
+            nonlocal frame_idx, proc_times, alert_cooldown, recent_incidents
+            nonlocal current_threshold, jpeg_quality
+
+            try:
+                while True:
+                    ret, frame = cap.read()
                 if not ret:
                     if isinstance(cap_source, int):
                         await asyncio.sleep(0.01)
@@ -346,7 +372,7 @@ def create_app(video_source="webcam", model_path=None,
                             },
                         })
 
-                        is_alert = confidence >= threshold
+                        is_alert = confidence >= current_threshold
                         if is_alert:
                             any_alert = True
 
@@ -384,7 +410,7 @@ def create_app(video_source="webcam", model_path=None,
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                             (220, 220, 220), 2)
                 cv2.putText(annotated, f"src: {source_label}  "
-                            f"fr:{frame_idx}  thr:{threshold:.2f}",
+                            f"fr:{frame_idx}  thr:{current_threshold:.2f}",
                             (12, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                             (180, 180, 180), 1)
 
@@ -411,7 +437,7 @@ def create_app(video_source="webcam", model_path=None,
 
                 # ---- Encode & send ---------------------------------------
                 _, buf = cv2.imencode(".jpg", annotated,
-                                      [cv2.IMWRITE_JPEG_QUALITY, 78])
+                                      [cv2.IMWRITE_JPEG_QUALITY, jpeg_quality])
                 await ws.send_bytes(buf.tobytes())
                 await ws.send_json({
                     "type": "frame",
@@ -423,6 +449,9 @@ def create_app(video_source="webcam", model_path=None,
                     "alert": any_alert,
                 })
 
+        # Run stream loop and recv loop concurrently
+        try:
+            await asyncio.gather(stream_loop(), recv_loop())
         except WebSocketDisconnect:
             print("WebSocket disconnected")
         except Exception as exc:
@@ -446,7 +475,7 @@ def create_app(video_source="webcam", model_path=None,
         total   = conn.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
         last_h  = conn.execute(
             "SELECT COUNT(*) FROM incidents WHERE timestamp > ?",
-            ((datetime.now() - timedelta(hours=1)).isoformat(),),
+            ((datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),),
         ).fetchone()[0]
         conn.close()
         return {"total_incidents": total, "last_hour": last_h}

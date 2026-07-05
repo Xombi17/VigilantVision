@@ -532,7 +532,7 @@ function renderIncidents() {
   alertCount.textContent = data.length;
 
   incidentsEl.innerHTML = data.map(inc => {
-    const time = inc.timestamp ? new Date(inc.timestamp + 'Z').toLocaleTimeString() : '--';
+    const time = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString() : '--';
     let feats = '';
     if (inc.features) {
       try {
@@ -551,15 +551,26 @@ function renderIncidents() {
 }
 
 // ======================================================================
+//  Send control message to backend via WebSocket
+// ======================================================================
+function wsSend(data) {
+  if (STATE.ws && STATE.ws.readyState === WebSocket.OPEN) {
+    STATE.ws.send(JSON.stringify(data));
+  }
+}
+
+// ======================================================================
 //  Controls
 // ======================================================================
 thrSlider.addEventListener('input', () => {
   STATE.threshold = parseFloat(thrSlider.value);
   thrVal.textContent = STATE.threshold.toFixed(2);
+  wsSend({ cmd: 'set_threshold', value: STATE.threshold });
 });
 
 qualSel.addEventListener('change', () => {
   STATE.quality = parseInt(qualSel.value);
+  wsSend({ cmd: 'set_quality', value: STATE.quality });
 });
 
 $('#reconnect-btn').addEventListener('click', connect);
