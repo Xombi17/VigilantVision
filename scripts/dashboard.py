@@ -237,9 +237,11 @@ def create_app(video_source="webcam", model_path=None,
         current_threshold = threshold  # mutable local, can be updated via WS messages
         jpeg_quality = 78  # mutable local, can be updated via WS messages
 
+        _connected = True
+
         async def recv_loop():
             """Background task that reads control messages from the client."""
-            nonlocal current_threshold, jpeg_quality
+            nonlocal current_threshold, jpeg_quality, _connected
             try:
                 while True:
                     raw = await ws.receive_text()
@@ -254,12 +256,12 @@ def create_app(video_source="webcam", model_path=None,
                         jpeg_quality = max(10, min(100, val))
                         print(f"  JPEG quality updated → {jpeg_quality}")
             except (WebSocketDisconnect, Exception):
-                pass
+                _connected = False
 
         async def stream_loop():
             """Main loop: read frames, process, send."""
             nonlocal frame_idx, proc_times, alert_cooldown, recent_incidents
-            nonlocal current_threshold, jpeg_quality
+            nonlocal current_threshold, jpeg_quality, _connected
 
             while True:
                 ret, frame = cap.read()
@@ -451,18 +453,24 @@ def create_app(video_source="webcam", model_path=None,
                 avg_ms = float(np.mean(proc_times)) if proc_times else 0.0
 
                 # ---- Encode & send ---------------------------------------
+                if not _connected:
+                    break
                 _, buf = cv2.imencode(".jpg", annotated,
                                       [cv2.IMWRITE_JPEG_QUALITY, jpeg_quality])
-                await ws.send_bytes(buf.tobytes())
-                await ws.send_json({
-                    "type": "frame",
-                    "frame_idx": frame_idx,
-                    "processing_ms": _py(round(avg_ms, 1)),
-                    "num_persons": len(persons),
-                    "persons": persons,
-                    "max_confidence": _py(round(max_conf, 4)),
-                    "alert": any_alert,
-                })
+                try:
+                    await ws.send_bytes(buf.tobytes())
+                    await ws.send_json({
+                        "type": "frame",
+                        "frame_idx": frame_idx,
+                        "processing_ms": _py(round(avg_ms, 1)),
+                        "num_persons": len(persons),
+                        "persons": persons,
+                        "max_confidence": _py(round(max_conf, 4)),
+                        "alert": any_alert,
+                    })
+                except WebSocketDisconnect:
+                    _connected = False
+                    break
 
         # Run stream loop and recv loop concurrently
         try:
