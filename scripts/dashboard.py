@@ -246,15 +246,15 @@ def create_app(video_source="webcam", model_path=None,
             nonlocal frame_idx, proc_times, alert_cooldown, recent_incidents
             nonlocal current_threshold, jpeg_quality
 
-            try:
-                while True:
-                    ret, frame = cap.read()
+            while True:
+                ret, frame = cap.read()
                 if not ret:
                     if isinstance(cap_source, int):
                         await asyncio.sleep(0.01)
                         continue
                     else:
                         await ws.send_json({"type": "video_end"})
+                        await ws.close()
                         break
 
                 frame_idx += 1
