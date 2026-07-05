@@ -10,58 +10,109 @@ This guide walks through training the **r3d_18 video classifier** (the TA-recomm
 
 ## Step 1: Get the Code
 
-The repo is already on GitHub. Your friend can clone it:
+### Option A: Clone from GitHub (if friend has internet)
 
 ```bash
+# Works on Windows (Git Bash / PowerShell / CMD) and Linux
 git clone https://github.com/Xombi17/VigilantVision.git
 cd VigilantVision
 ```
 
-### What Else to Copy From This Laptop
+### Option B: Copy from your USB drive
 
-The dataset and annotation file are too large for GitHub, so you need to transfer those manually:
+Copy the entire `VigilantVision` folder (excluding `dataset/`, `features.csv`, `.venv/`) via USB.
+
+### Transfer the Dataset
+
+The dataset (~6GB) is too large for GitHub. Transfer it manually:
 
 | What | Where it is | Size |
 |---|---|---|
-| `dataset/` | `./dataset/` | ~6GB (UCF-Crime extracted videos) |
-| `Temporal_Anomaly_Annotation.txt` | `./` | ~15KB |
+| `dataset/` | Your laptop: `./dataset/` | ~6GB |
+| `Temporal_Anomaly_Annotation.txt` | Your laptop: `./` | ~15KB |
 
-**Quick copy command (USB drive):**
+**On Windows (friend's machine):** Just copy the `dataset/` folder and `Temporal_Anomaly_Annotation.txt` via USB/external drive into the `VigilantVision/` directory.
+
+**On Linux:**
 ```bash
-# On your laptop:
+# On your laptop (pack):
 tar czf vigilantvision_data.tar.gz dataset/ Temporal_Anomaly_Annotation.txt
-# Transfer the .tar.gz to friend's laptop, then:
+# On friend's laptop (unpack):
 tar xzf vigilantvision_data.tar.gz -C /path/to/VigilantVision/
 ```
 
 ---
 
-## Step 2: Install Dependencies (Friend's Laptop)
+## Step 2: Install Dependencies
 
+### Step 2a: Install ffmpeg (needed for clip preparation)
+
+**Windows:**
+```powershell
+# Option 1 — Using winget (Windows 10/11 built-in package manager):
+winget install ffmpeg
+
+# Option 2 — Using Chocolatey (if installed):
+choco install ffmpeg
+
+# Option 3 — Manual download:
+# 1. Go to https://ffmpeg.org/download.html
+# 2. Download the Windows build (gyan.dev build recommended)
+# 3. Extract the ZIP, add the 'bin' folder to your PATH
+# 4. Open a NEW PowerShell/CMD and test:
+ffmpeg -version
+```
+
+**Linux (Ubuntu/Debian):**
 ```bash
-# Install system packages for video processing (ffmpeg is needed for clip prep)
 sudo apt update
 sudo apt install ffmpeg -y
-
-# Install Python packages
-pip install torch torchvision av scikit-learn --break-system-packages
-
-# Verify GPU is detected
-python3 -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}, Device count: {torch.cuda.device_count()}')"
 ```
 
-**You should see:** `CUDA available: True, Device count: 1`
+### Step 2b: Install Python + PyTorch + Dependencies
 
-> **Important:** The training script checks for `av` (PyAV) at startup and will exit with a clear error if it's missing.
+**Windows — Using Miniconda (RECOMMENDED — easiest GPU setup):**
+```powershell
+# 1. Install Miniconda from: https://docs.conda.io/en/latest/miniconda.html
+#    Download "Windows 64-bit" installer and run it
 
-If it says `False`, the GPU drivers may not be set up. Install CUDA toolkit:
+# 2. Open "Anaconda Prompt" (from Start Menu) and run:
+conda create -n vigilantvision python=3.10 -y
+conda activate vigilantvision
+
+# 3. Install PyTorch with CUDA (this is the key step for Windows):
+conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia -y
+
+# 4. Install remaining packages:
+pip install av scikit-learn joblib
+
+# 5. Verify GPU is detected:
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}, Device count: {torch.cuda.device_count()}')"
+```
+
+**Windows — Using pip directly:**
+```powershell
+# Make sure Python 3.10+ is installed from python.org
+# Make sure NVIDIA drivers are installed from nvidia.com
+
+# Install PyTorch with CUDA:
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# Install remaining packages:
+pip install av scikit-learn joblib
+```
+
+**Linux:**
 ```bash
-# Install PyTorch with CUDA 12.1
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121 --break-system-packages
-
-# Check GPU drivers
-nvidia-smi
+pip install torch torchvision av scikit-learn joblib --break-system-packages
 ```
+
+### You should see: `CUDA available: True, Device count: 1`
+
+> ⚠️ If it says `False`:
+> - **Windows:** Reinstall NVIDIA drivers from nvidia.com → make sure "CUDA" is selected during install
+> - **Windows (conda):** Make sure you used the `pytorch-cuda` package (Step 2b above)
+> - **Linux:** Run `nvidia-smi` to check drivers, then `pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121`
 
 ---
 
@@ -69,15 +120,18 @@ nvidia-smi
 
 This script trims the UCF-Crime videos into short ~4.5-second clips centered on the annotated theft windows.
 
+Open a terminal (PowerShell, CMD, or bash) in the `VigilantVision/` folder and run:
+
 ```bash
-cd /path/to/vigilantvision
-python3 scripts/prepare_clips.py \
-    --dataset_dir ./dataset \
-    --annotation_file Temporal_Anomaly_Annotation.txt \
-    --output_dir clips \
-    --clip_duration 4.5 \
+# Windows (PowerShell/CMD) and Linux — same command:
+python scripts/prepare_clips.py ^
+    --dataset_dir dataset ^
+    --annotation_file Temporal_Anomaly_Annotation.txt ^
+    --output_dir clips ^
+    --clip_duration 4.5 ^
     --max_clips_per_video 5
 ```
+> **Note for Windows:** Use `^` (caret) for line continuation in CMD, or `` ` `` (backtick) in PowerShell. Or just put everything on one line (remove the `^`).
 
 **What this does:**
 - Reads the annotation file to find theft window timestamps
@@ -97,10 +151,6 @@ Negative videos (Normal): ~145
   [2] Shoplifting001_x264.mp4 @ 30.5s (theft window 900-930)
   ...
 
-=== Extracting Negative Clips ===
-  [21] Normal_Videos_003_x264.mp4 @ 45.1s
-  ...
-
 ==================================================
   Done! Created ~150-200 clips:
     Positive: ~40-60
@@ -112,13 +162,18 @@ Negative videos (Normal): ~145
 
 ## Step 4: Train the 3D-CNN (1-3 hours)
 
+Make sure you're in the `VigilantVision/` folder with the conda environment activated (if using conda):
+
 ```bash
-cd /path/to/vigilantvision
-python3 scripts/train_clip_classifier.py \
-    --manifest clips/clips_manifest.csv \
-    --epochs 150 \
-    --batch_size 4 \
-    --lr 1e-4 \
+# If using conda:
+conda activate vigilantvision
+
+# Run training:
+python scripts/train_clip_classifier.py ^
+    --manifest clips/clips_manifest.csv ^
+    --epochs 150 ^
+    --batch_size 4 ^
+    --lr 1e-4 ^
     --eval_every 10
 ```
 
@@ -147,8 +202,7 @@ Training complete. Best val accuracy: 0.733
 
 **If you get CUDA out of memory:**
 ```bash
-# Try smaller batch size
-python3 scripts/train_clip_classifier.py --manifest clips/clips_manifest.csv --batch_size 2
+python scripts/train_clip_classifier.py --manifest clips/clips_manifest.csv --batch_size 2
 ```
 
 ---
@@ -200,31 +254,66 @@ video, _, _ = read_video("clips/normal_001.mp4", pts_unit="sec")
 |---|---|---|
 | Accuracy stuck at ~0.50 | Not actually learning | Check GPU is detected, lower learning rate |
 | CUDA OOM | Too many clips in batch | Reduce `--batch_size` to 2 |
-| Training very slow | CPU instead of GPU | `torch.cuda.is_available()` returns False → fix CUDA drivers |
-| Clips fail to extract | ffmpeg not installed | `sudo apt install ffmpeg` |
+| Training very slow / CPU instead of GPU | PyTorch installed without CUDA | **Windows:** Reinstall with `pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121` or use conda |
+| "PyAV is required" error | `av` package missing | `pip install av` |
+| ffmpeg/ffprobe not found | ffmpeg not installed or not in PATH | **Windows:** Install via `winget install ffmpeg` and restart terminal |
+| `python3` not found on Windows | Python installed as `python` not `python3` | Use `python` instead of `python3` everywhere |
 | Validation accuracy jumps wildly | Very small validation set | Normal with ~30 clips; look at trend over 150 epochs |
+| `--break-system-packages` error | Only happens on Linux | **Windows:** Don't use this flag — just `pip install <pkg>` |
 
 ### Important Note:
 With only 21 annotated videos, even the 3D-CNN may not achieve great metrics. **This is expected and honest.** The TA recommended this approach because it's the right *methodology* for a capstone — even if the numbers aren't production-ready, showing that you understand transfer learning, video-level cross-validation, and class imbalance strategies demonstrates real ML competence.
 
 ---
 
+## Quick-Start Summary (Windows, for friend)
+
+```powershell
+# 1. Install ffmpeg
+winget install ffmpeg
+
+# 2. Install Miniconda (download from docs.conda.io)
+#    Then open "Anaconda Prompt"
+
+# 3. Setup environment
+conda create -n vigilantvision python=3.10 -y
+conda activate vigilantvision
+conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia -y
+pip install av scikit-learn joblib
+
+# 4. Clone + copy data
+git clone https://github.com/Xombi17/VigilantVision.git
+cd VigilantVision
+#    ^^ Copy dataset/ folder here via USB ^^
+
+# 5. Prepare clips
+python scripts/prepare_clips.py --dataset_dir dataset --annotation_file Temporal_Anomaly_Annotation.txt --output_dir clips
+
+# 6. Train!
+python scripts/train_clip_classifier.py --manifest clips/clips_manifest.csv --epochs 150
+```
+
+---
+
 ## File Structure After Setup
 
 ```
-vigilantvision/
+VigilantVision/
 ├── scripts/
 │   ├── extract_features.py       # Feature extraction (already ran)
 │   ├── parse_annotations.py      # Annotation checker
 │   ├── prepare_clips.py          # 🔥 Clip prep script (run this first)
-│   └── train_clip_classifier.py  # 🔥 3D-CNN training script (run this second)
+│   ├── train_clip_classifier.py  # 🔥 3D-CNN training script (run this second)
+│   └── heuristic_analysis.py     # Heuristic threshold analysis
 ├── clips/
 │   ├── shoplifting_0001.mp4      # Generated by prepare_clips.py
 │   ├── normal_0001.mp4           # Generated by prepare_clips.py
 │   └── clips_manifest.csv        # Generated by prepare_clips.py
 ├── models/
 │   └── clip_classifier_best.pt   # Best model (generated by training)
-├── dataset/                      # UCF-Crime videos (~6GB, copy this over)
+├── docs/
+│   └── 3d_cnn_training_guide.md  # This guide
+├── dataset/                      # UCF-Crime videos (~6GB, copy this over via USB)
 ├── Temporal_Anomaly_Annotation.txt
 ├── requirements.txt
 └── README.md
