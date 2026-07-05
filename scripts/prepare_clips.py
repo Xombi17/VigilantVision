@@ -31,15 +31,16 @@ import csv
 import random
 import argparse
 import subprocess
+import shutil
 
 random.seed(42)
 
 # ffmpeg is required for trimming
 # Check it's available
-if subprocess.run(["which", "ffmpeg"], capture_output=True).returncode != 0:
-    sys.exit("ffmpeg is required. Install it with: sudo apt install ffmpeg")
-if subprocess.run(["which", "ffprobe"], capture_output=True).returncode != 0:
-    sys.exit("ffprobe is required. Install it with: sudo apt install ffmpeg")
+if shutil.which("ffmpeg") is None:
+    sys.exit("ffmpeg is required. Install it and add it to your PATH (e.g. using 'winget install ffmpeg').")
+if shutil.which("ffprobe") is None:
+    sys.exit("ffprobe is required. Install it and add it to your PATH (e.g. using 'winget install ffmpeg').")
 
 
 def parse_annotations(path):
@@ -165,11 +166,6 @@ def main():
     # --- Positive clips (centered on theft windows) ---
     print("\n=== Extracting Positive Clips ===")
     for fname, path, segments in pos_videos:
-        duration = get_video_duration(path)
-        if duration is None:
-            print(f"  [skip] can't read duration: {fname}")
-            continue
-
         duration, fps = get_video_info(path)
         if duration is None:
             print(f"  [skip] can't read video info: {fname}")

@@ -122,8 +122,18 @@ This script trims the UCF-Crime videos into short ~4.5-second clips centered on 
 
 Open a terminal (PowerShell, CMD, or bash) in the `VigilantVision/` folder and run:
 
-```bash
-# Windows (PowerShell/CMD) and Linux — same command:
+For **PowerShell**:
+```powershell
+python scripts/prepare_clips.py `
+    --dataset_dir dataset `
+    --annotation_file Temporal_Anomaly_Annotation.txt `
+    --output_dir clips `
+    --clip_duration 4.5 `
+    --max_clips_per_video 5
+```
+
+For **Command Prompt (CMD)**:
+```cmd
 python scripts/prepare_clips.py ^
     --dataset_dir dataset ^
     --annotation_file Temporal_Anomaly_Annotation.txt ^
@@ -131,7 +141,11 @@ python scripts/prepare_clips.py ^
     --clip_duration 4.5 ^
     --max_clips_per_video 5
 ```
-> **Note for Windows:** Use `^` (caret) for line continuation in CMD, or `` ` `` (backtick) in PowerShell. Or just put everything on one line (remove the `^`).
+
+For **Single line (works everywhere)**:
+```bash
+python scripts/prepare_clips.py --dataset_dir dataset --annotation_file Temporal_Anomaly_Annotation.txt --output_dir clips --clip_duration 4.5 --max_clips_per_video 5
+```
 
 **What this does:**
 - Reads the annotation file to find theft window timestamps
@@ -168,13 +182,29 @@ Make sure you're in the `VigilantVision/` folder with the conda environment acti
 # If using conda:
 conda activate vigilantvision
 
-# Run training:
+Run training (PowerShell):
+```powershell
+python scripts/train_clip_classifier.py `
+    --manifest clips/clips_manifest.csv `
+    --epochs 150 `
+    --batch_size 4 `
+    --lr 1e-4 `
+    --eval_every 10
+```
+
+Run training (Command Prompt):
+```cmd
 python scripts/train_clip_classifier.py ^
     --manifest clips/clips_manifest.csv ^
     --epochs 150 ^
     --batch_size 4 ^
     --lr 1e-4 ^
     --eval_every 10
+```
+
+Run training (Single line):
+```bash
+python scripts/train_clip_classifier.py --manifest clips/clips_manifest.csv --epochs 150 --batch_size 4 --lr 1e-4 --eval_every 10
 ```
 
 **Flags you can tweak:**
