@@ -468,8 +468,9 @@ def create_app(video_source="webcam", model_path=None,
                         "max_confidence": _py(round(max_conf, 4)),
                         "alert": any_alert,
                     })
-                except WebSocketDisconnect:
+                except Exception as send_err:
                     _connected = False
+                    print(f"  Send failed (connection dropped): {send_err}")
                     break
 
         # Run stream loop and recv loop concurrently
