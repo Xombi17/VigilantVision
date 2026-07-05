@@ -182,6 +182,16 @@ def create_app(video_source="webcam", model_path=None,
     pose_model = YOLO(str(ROOT_DIR / "yolov8n-pose.pt"))
     item_model = YOLO(str(ROOT_DIR / "yolov8n.pt"))
 
+    # Warm up models with dummy inference (avoids first-frame timeout)
+    print("Warming up models …")
+    dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+    try:
+        pose_model.predict(dummy, verbose=False)
+        item_model.predict(dummy, verbose=False)
+        print("  ✓ Models warmed up")
+    except Exception as e:
+        print(f"  ⚠ Warmup warning: {e}")
+
     # --- load classifier --------------------------------------------------
     classifier = None
     scaler = None
@@ -230,12 +240,15 @@ def create_app(video_source="webcam", model_path=None,
             "frame_interval": frame_interval,
         })
 
+        # Small delay to let the browser settle the WebSocket
+        await asyncio.sleep(0.3)
+
         frame_idx = 0
         proc_times = []
         alert_cooldown = 0
         recent_incidents = set()  # dedup: (track_id, bucket_of_50_frames)
         current_threshold = threshold  # mutable local, can be updated via WS messages
-        jpeg_quality = 78  # mutable local, can be updated via WS messages
+        jpeg_quality = 60  # mutable local, can be updated via WS messages
 
         _connected = True
 

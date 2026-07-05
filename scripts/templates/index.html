@@ -275,9 +275,9 @@ html,body{height:100%;background:var(--bg-primary);color:var(--text-primary);
           <div class="control-group">
             <label>Video quality</label>
             <select id="quality-select">
-              <option value="72">Standard</option>
-              <option value="85" selected>High</option>
-              <option value="95">Maximum</option>
+              <option value="60" selected>Standard</option>
+              <option value="78">High</option>
+              <option value="92">Maximum</option>
             </select>
           </div>
           <div class="control-group" style="margin-top:20px;">
@@ -380,10 +380,9 @@ function connect() {
   STATE.ws.onclose = () => {
     STATE.connected = false;
     connOverlay.style.display = 'flex';
-    connText.textContent = 'Disconnected. Reconnecting in 2s…';
+    connText.textContent = '⚠ Disconnected. Click "Reconnect Stream" to try again.';
     statusDot.style.background = 'var(--accent-red)';
     STATE.ws = null;
-    setTimeout(connect, 2000);
   };
 
   STATE.ws.onerror = () => {
