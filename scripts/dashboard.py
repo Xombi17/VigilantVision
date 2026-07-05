@@ -27,6 +27,7 @@ import argparse
 import asyncio
 import sqlite3
 import time
+import traceback
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -136,10 +137,28 @@ def _py(val):
     return val
 
 
+def _sanitize(obj):
+    """Recursively convert every numpy value to a native Python type.
+    This runs BEFORE json.dumps so zero numpy types reach the encoder."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_sanitize(v) for v in obj)
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
+
+
 async def _send_json(ws, data):
     """Send JSON over WebSocket with numpy-safe encoding.
     Replaces ws.send_json() to avoid float32/float64 serialization crashes."""
-    await ws.send_text(json.dumps(data, cls=_NumpyEncoder))
+    # Sanitize recursively FIRST, then serialize
+    clean = _sanitize(data)
+    await ws.send_text(json.dumps(clean, cls=_NumpyEncoder))
 
 
 # ---------------------------------------------------------------------------
@@ -544,6 +563,7 @@ def create_app(video_source="webcam", model_path=None,
             print("WebSocket disconnected")
         except Exception as exc:
             print(f"Stream error: {exc}")
+            traceback.print_exc()
         finally:
             cap.release()
 
