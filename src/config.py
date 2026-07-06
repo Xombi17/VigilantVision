@@ -44,6 +44,7 @@ class SettingsModel(BaseModel):
     telegramChatId: str = ""
     roiPoints: list[list[int]] = []
     showHeatmap: bool = False
+    useCLIPClassifier: bool = False
 
 
 # Load settings

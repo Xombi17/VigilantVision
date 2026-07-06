@@ -103,12 +103,13 @@ class SurveillanceEngine:
         # consistently high — prevents single-frame noise spikes from triggering.
         # NOTE: Thresholds are intentionally strict — the model fires false positives
         # on normal webcam footage; we want it to be very conservative.
+        from src.config import current_settings
         CLIP_THRESHOLD = 0.92          # only trigger if single-frame conf is very high
         CLIP_HISTORY_LEN = 8           # number of consecutive readings needed
         CLIP_HISTORY_THRESHOLD = 0.88  # AND the rolling average must be >= 0.88
 
         clip_confidence = cam_data.get("last_clip_confidence", 0.0)
-        if self.clip_model is not None:
+        if self.clip_model is not None and current_settings.useCLIPClassifier:
             try:
                 if cam_id not in self.clip_buffers:
                     self.clip_buffers[cam_id] = []
@@ -493,8 +494,9 @@ class SurveillanceEngine:
 
         # --- Resolve pending 3D-CNN alert AFTER pose loop ---
         # At this point person_states is fully updated, so VIP check is accurate.
+        from src.config import current_settings
         pending_clip = cam_data.pop("_pending_clip_alert", (False, 0.0))
-        if pending_clip[0]:
+        if pending_clip[0] and current_settings.useCLIPClassifier:
             vip_present = any(
                 state_key[0] == cam_id and getattr(p_state_check, "is_vip", False)
                 for state_key, p_state_check in person_states.items()

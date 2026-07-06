@@ -19,7 +19,8 @@ export default function SettingsPage() {
     telegramBotToken: "",
     telegramChatId: "",
     roiPoints: [] as number[][],
-    showHeatmap: false
+    showHeatmap: false,
+    useCLIPClassifier: false
   });
 
   useEffect(() => {
@@ -133,6 +134,41 @@ export default function SettingsPage() {
                 className="rounded bg-black/40 border-glass-border text-brand" 
               />
               <label htmlFor="enable-telegram" className="text-sm text-foreground/80">Enable Telegram Alerts</label>
+            </div>
+          </form>
+        </div>
+
+        {/* AI Model Toggle Settings */}
+        <div className="glass-panel p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded bg-emerald-500/20 text-emerald-400">
+              <Bell className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-semibold">AI Detection Settings</h3>
+          </div>
+          <p className="text-sm text-foreground/60 mb-6">
+            Configure which deep learning models are used for real-time analysis.
+          </p>
+
+          <form className="space-y-4" onSubmit={e => e.preventDefault()}>
+            <div className="flex items-start gap-3">
+              <input 
+                type="checkbox" 
+                id="enable-clip" 
+                name="useCLIPClassifier"
+                checked={settings.useCLIPClassifier}
+                onChange={handleChange}
+                className="mt-1 rounded bg-black/40 border-glass-border text-brand" 
+              />
+              <div>
+                <label htmlFor="enable-clip" className="text-sm font-semibold text-foreground/80 block">
+                  Enable PyTorch 3D-CNN (CLIP) Classifier
+                </label>
+                <p className="text-xs text-foreground/40 mt-1">
+                  Enables action recognition classifier to detect suspicious body movements and theft. 
+                  When disabled, the system falls back entirely to YOLO pose estimation and standard proximity rules.
+                </p>
+              </div>
             </div>
           </form>
         </div>
