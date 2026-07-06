@@ -23,8 +23,12 @@ from collections import defaultdict
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
-    precision_score, recall_score, f1_score, roc_auc_score,
-    confusion_matrix, classification_report,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    confusion_matrix,
+    classification_report,
 )
 
 warnings.filterwarnings("ignore")  # keep output clean
@@ -57,7 +61,7 @@ def load_and_clean(path):
         for r in vrows:
             wtt = float(r["wrist_to_torso_norm"])
             wti = float(r["wrist_to_item_norm"])
-            ni  = int(r["num_items_nearby"])
+            ni = int(r["num_items_nearby"])
 
             # Fix sentinel: replace 1e6 with NaN
             if abs(wti - SENTINEL) < 1.0:
@@ -72,12 +76,14 @@ def load_and_clean(path):
 
     # Count positives
     total_pos = y_all.sum()
-    print(f"Positive frames: {total_pos} ({total_pos/len(y_all)*100:.2f}%)")
+    print(f"Positive frames: {total_pos} ({total_pos / len(y_all) * 100:.2f}%)")
     print(f"Negative frames: {len(y_all) - total_pos}")
 
     # Count NaN in wrist_to_item_norm
     nan_count = np.isnan(X_all[:, 1]).sum()
-    print(f"Rows with sentinel (NaN after fix): {nan_count} ({nan_count/len(X_all)*100:.1f}%)")
+    print(
+        f"Rows with sentinel (NaN after fix): {nan_count} ({nan_count / len(X_all) * 100:.1f}%)"
+    )
     print(f"NaN imputation will be done per-fold during CV (to avoid data leakage)")
 
     return X_all, y_all, video_groups, videos
@@ -97,7 +103,9 @@ def video_level_cv(X, y, video_groups, unique_videos, n_splits=5):
     pos_videos = [v for v in unique_videos if video_to_label[v] == 1]
     neg_videos = [v for v in unique_videos if video_to_label[v] == 0]
 
-    print(f"\nVideo-level split: {len(pos_videos)} positive videos, {len(neg_videos)} negative videos")
+    print(
+        f"\nVideo-level split: {len(pos_videos)} positive videos, {len(neg_videos)} negative videos"
+    )
 
     np.random.shuffle(pos_videos)
     np.random.shuffle(neg_videos)
@@ -132,15 +140,15 @@ def evaluate(y_true, y_pred, y_prob, split_name="val"):
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  {split_name.upper()} METRICS")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"  Precision:  {precision:.4f}")
     print(f"  Recall:     {recall:.4f}")
     print(f"  F1:         {f1:.4f}")
     print(f"  ROC-AUC:    {roc_auc:.4f}")
     print(f"  Confusion:  TP={tp}  FP={fp}  FN={fn}  TN={tn}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     return {"precision": precision, "recall": recall, "f1": f1, "roc_auc": roc_auc}
 
@@ -148,8 +156,12 @@ def evaluate(y_true, y_pred, y_prob, split_name="val"):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_csv", default="features.csv")
-    parser.add_argument("--C", type=float, default=1.0,
-                        help="Inverse regularization strength (smaller = stronger reg)")
+    parser.add_argument(
+        "--C",
+        type=float,
+        default=1.0,
+        help="Inverse regularization strength (smaller = stronger reg)",
+    )
     parser.add_argument("--n_splits", type=int, default=5)
     args = parser.parse_args()
 
@@ -166,18 +178,22 @@ def main():
     best_score = 0
 
     for fold_idx, (train_mask, val_mask) in enumerate(folds):
-        print(f"\n{'#'*50}")
+        print(f"\n{'#' * 50}")
         print(f"  FOLD {fold_idx + 1}/{len(folds)}")
-        print(f"{'#'*50}")
+        print(f"{'#' * 50}")
 
         X_train, X_val = X[train_mask], X[val_mask]
         y_train, y_val = y[train_mask], y[val_mask]
 
         # Count train/val positive frames
-        print(f"  Train: {y_train.sum()} pos / {len(y_train)} total "
-              f"({y_train.sum()/len(y_train)*100:.2f}%)")
-        print(f"  Val:   {y_val.sum()} pos / {len(y_val)} total "
-              f"({y_val.sum()/len(y_val)*100:.2f}%)")
+        print(
+            f"  Train: {y_train.sum()} pos / {len(y_train)} total "
+            f"({y_train.sum() / len(y_train) * 100:.2f}%)"
+        )
+        print(
+            f"  Val:   {y_val.sum()} pos / {len(y_val)} total "
+            f"({y_val.sum() / len(y_val) * 100:.2f}%)"
+        )
 
         # Impute NaN per-fold (train mean only, to avoid data leakage)
         col_mean_train = np.nanmean(X_train[:, 1])
@@ -214,22 +230,26 @@ def main():
             best_scaler = scaler
 
     # Summary across folds
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  CROSS-VALIDATION SUMMARY ({args.n_splits} folds)")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     for metric, values in all_metrics.items():
         mean_val = np.mean(values)
         std_val = np.std(values)
         print(f"  {metric:12s}:  {mean_val:.4f}  ±  {std_val:.4f}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
     # Save the best model
     import joblib
     import os
 
     os.makedirs("models", exist_ok=True)
-    joblib.dump({"model": best_model, "scaler": best_scaler}, "models/tabular_classifier.joblib")
-    print(f"Best model (ROC-AUC={best_score:.4f}) saved to models/tabular_classifier.joblib")
+    joblib.dump(
+        {"model": best_model, "scaler": best_scaler}, "models/tabular_classifier.joblib"
+    )
+    print(
+        f"Best model (ROC-AUC={best_score:.4f}) saved to models/tabular_classifier.joblib"
+    )
 
     # Print coefficients
     coef_names = ["wrist_to_torso_norm", "wrist_to_item_norm", "num_items_nearby"]

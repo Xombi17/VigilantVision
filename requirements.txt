@@ -1,46 +1,14 @@
-# =============================================================================
-# VigilantVision — Python Dependencies
-# =============================================================================
-# Install with:
-#   pip install -r requirements.txt --break-system-packages
-#
-# For the 3D-CNN (friend's laptop), additionally install:
-#   pip install torch torchvision av --break-system-packages
-#   sudo apt install ffmpeg
-# =============================================================================
-
-# ---------- Core Vision Pipeline ----------
-# Feature extraction (scripts/extract_features.py)
-# Includes YOLOv8 detection, YOLOv8-Pose, ByteTrack
-# NOTE: ultralytics pulls in torch, torchvision, and numpy automatically
-ultralytics>=8.0.0
-opencv-python>=4.8.0
-numpy>=1.24.0
-
-# ---------- Tabular Classifier (scripts/train_tabular_classifier.py) ----------
-scikit-learn>=1.3.0
-joblib>=1.3.0
-
-# ---------- Web Dashboard (Phase 3 — FastAPI) ----------
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-websockets>=12.0
-jinja2>=3.1.0
-python-multipart>=0.0.6
-
-# ---------- Database ----------
-# SQLite is built into Python, no extra package needed
-
-# =============================================================================
-# For 3D-CNN Video Classifier (Track 2 — friend's laptop)
-# These are commented out because they're heavy and optional:
-# =============================================================================
-# torch>=2.0.0                    # Deep learning framework (comes with ultralytics)
-# torchvision>=0.15.0             # Video models + r3d_18 pretrained weights
-# av>=10.0.0                      # PyAV — required by torchvision.io.read_video()
-
-# =============================================================================
-# Stretch Goals (ONNX export, quantization)
-# =============================================================================
-# onnx>=1.14.0
-# onnxruntime-gpu>=1.15.0
+fastapi
+uvicorn
+websockets
+opencv-python
+ultralytics
+numpy
+lapx
+requests
+face_recognition
+python-dotenv
+psutil
+torch
+torchvision
+python-multipart

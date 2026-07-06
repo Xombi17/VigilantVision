@@ -101,7 +101,10 @@ def run_heuristic(X_val, y_val, name, predict_fn):
         "recall": recall,
         "f1": f1,
         "roc_auc": roc_auc,
-        "tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn),
+        "tp": int(tp),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tn": int(tn),
     }
 
 
@@ -128,30 +131,52 @@ def main():
 
     # H3: combined — wrist close to torso AND items nearby
     for thr in [0.1, 0.15, 0.2, 0.25]:
-        heuristics.append((f"wtt < {thr} AND ni > 0", lambda X, t=thr: ((X[:, 0] < t) & (X[:, 2] > 0)).astype(int)))
+        heuristics.append(
+            (
+                f"wtt < {thr} AND ni > 0",
+                lambda X, t=thr: ((X[:, 0] < t) & (X[:, 2] > 0)).astype(int),
+            )
+        )
 
     # H4: combined — wrist close to torso OR items nearby
     for thr in [0.1, 0.15, 0.2]:
-        heuristics.append((f"wtt < {thr} OR ni > 0", lambda X, t=thr: ((X[:, 0] < t) | (X[:, 2] > 0)).astype(int)))
+        heuristics.append(
+            (
+                f"wtt < {thr} OR ni > 0",
+                lambda X, t=thr: ((X[:, 0] < t) | (X[:, 2] > 0)).astype(int),
+            )
+        )
 
     # H5: wrist close to item (small distance = near an item)
     for thr in [0.5, 1.0, 1.5]:
         heuristics.append((f"wti < {thr}", lambda X, t=thr: (X[:, 1] < t).astype(int)))
 
     # H6: all three (wtt small, wti small, items nearby)
-    heuristics.append(("wtt < 0.15 AND wti < 1.0 AND ni > 0",
-                        lambda X: ((X[:, 0] < 0.15) & (X[:, 1] < 1.0) & (X[:, 2] > 0)).astype(int)))
+    heuristics.append(
+        (
+            "wtt < 0.15 AND wti < 1.0 AND ni > 0",
+            lambda X: ((X[:, 0] < 0.15) & (X[:, 1] < 1.0) & (X[:, 2] > 0)).astype(int),
+        )
+    )
 
     # Run all heuristics across all folds
     results = {}
     for name, fn in heuristics:
-        results[name] = {"precision": [], "recall": [], "f1": [], "roc_auc": [],
-                          "tp": 0, "fp": 0, "fn": 0, "tn": 0}
+        results[name] = {
+            "precision": [],
+            "recall": [],
+            "f1": [],
+            "roc_auc": [],
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 0,
+        }
 
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"  HEURISTIC THRESHOLD ANALYSIS — {args.n_splits}-fold Video-Level CV")
     print(f"  Data: {len(X)} rows, {len(unique_videos)} videos")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     for fold_idx, (train_mask, val_mask) in enumerate(folds):
         X_val = X[val_mask]
@@ -169,46 +194,56 @@ def main():
             results[name]["tn"] += m["tn"]
 
     # Sort by average F1 descending and print
-    sorted_heuristics = sorted(heuristics, key=lambda h: np.mean(results[h[0]]["f1"]), reverse=True)
+    sorted_heuristics = sorted(
+        heuristics, key=lambda h: np.mean(results[h[0]]["f1"]), reverse=True
+    )
 
-    print(f"\n{'Heuristic':<40s} {'Prec':>6s} {'Rec':>6s} {'F1':>6s} {'AUC':>6s}  {'TP':>4s} {'FP':>4s} {'FN':>4s} {'TN':>4s}")
-    print(f"{'-'*90}")
+    print(
+        f"\n{'Heuristic':<40s} {'Prec':>6s} {'Rec':>6s} {'F1':>6s} {'AUC':>6s}  {'TP':>4s} {'FP':>4s} {'FN':>4s} {'TN':>4s}"
+    )
+    print(f"{'-' * 90}")
     for name, _ in sorted_heuristics:
         r = results[name]
         p_mean = np.mean(r["precision"])
         r_mean = np.mean(r["recall"])
         f_mean = np.mean(r["f1"])
         a_mean = np.mean(r["roc_auc"])
-        print(f"{name:<40s} {p_mean:>6.3f} {r_mean:>6.3f} {f_mean:>6.3f} {a_mean:>6.3f}  "
-              f"{r['tp']:>4d} {r['fp']:>4d} {r['fn']:>4d} {r['tn']:>4d}")
+        print(
+            f"{name:<40s} {p_mean:>6.3f} {r_mean:>6.3f} {f_mean:>6.3f} {a_mean:>6.3f}  "
+            f"{r['tp']:>4d} {r['fp']:>4d} {r['fn']:>4d} {r['tn']:>4d}"
+        )
 
     # Best 3
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"  TOP 3 HEURISTICS (by F1)")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     for name, _ in sorted_heuristics[:3]:
         r = results[name]
         p_mean = np.mean(r["precision"])
         r_mean = np.mean(r["recall"])
         f_mean = np.mean(r["f1"])
         a_mean = np.mean(r["roc_auc"])
-        print(f"\n  {'─'*50}")
+        print(f"\n  {'─' * 50}")
         print(f"  {name}")
-        print(f"  {'─'*50}")
-        print(f"  Precision: {p_mean:.4f}  |  Recall: {r_mean:.4f}  |  F1: {f_mean:.4f}  |  AUC: {a_mean:.4f}")
+        print(f"  {'─' * 50}")
+        print(
+            f"  Precision: {p_mean:.4f}  |  Recall: {r_mean:.4f}  |  F1: {f_mean:.4f}  |  AUC: {a_mean:.4f}"
+        )
         print(f"  Confusion: TP={r['tp']}  FP={r['fp']}  FN={r['fn']}  TN={r['tn']}")
 
     # Compare to logistic regression results
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"  COMPARISON WITH LOGISTIC REGRESSION")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"                        {'Prec':>6s} {'Rec':>6s} {'F1':>6s} {'AUC':>6s}")
-    print(f"  {'─'*40}")
+    print(f"  {'─' * 40}")
     print(f"  Logistic Regression    0.013  0.198  0.024  0.393")
     best = sorted_heuristics[0]
     r = results[best[0]]
-    print(f"  Best heuristic ({best[0]:<20s}  {np.mean(r['precision']):>6.3f} {np.mean(r['recall']):>6.3f} "
-          f"{np.mean(r['f1']):>6.3f} {np.mean(r['roc_auc']):>6.3f}")
+    print(
+        f"  Best heuristic ({best[0]:<20s}  {np.mean(r['precision']):>6.3f} {np.mean(r['recall']):>6.3f} "
+        f"{np.mean(r['f1']):>6.3f} {np.mean(r['roc_auc']):>6.3f}"
+    )
 
 
 if __name__ == "__main__":

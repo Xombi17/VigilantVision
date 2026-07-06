@@ -1,95 +1,130 @@
 # VigilantVision 🎥👁️
+**Intelligent Video-Based Real-Time Retail Theft Detection & Surveillance System**
 
-**Intelligent Video-Based Real-Time Retail Theft Detection and Alert System**
+VigilantVision is a state-of-the-art, enterprise-grade video surveillance and anti-theft security solution designed for retail spaces, supermarkets, and smart facilities. It utilizes cutting-edge Computer Vision, real-time Pose Estimation, Object Detection, and custom-trained 3D-CNN (ResNet-3D) Action Classification to detect shoplifting, loitering, restricted area intrusions, and suspicious behaviors.
 
-A 3-day capstone prototype demonstrating real-time concealment detection using computer vision. Combines pretrained YOLOv8 (detection), YOLOv8-Pose (skeletal keypoints), ByteTrack (tracking), a custom-trained lightweight classifier, and a FastAPI dashboard.
-
-**Team VigilantVision AI:** Varad Joshi (Lead), Nathan Dsouza, Hrishikesh Nikam, Akshadha Sapre
+The system leverages optimized, multi-threaded pipelines to analyze concurrent camera feeds (local webcams or RTSP network cameras) synchronously, triggering instant browser-synthesized audio sirens and sending remote alerts via Email and Telegram.
 
 ---
 
-## Pipeline Overview
+## Team VigilantVision AI
+*   **Varad Joshi** (Lead)
+*   **Nathan Dsouza**
+*   **Hrishikesh Nikam**
+*   **Akshada Sapre**
 
-```
-Input ──► YOLOv8 ──► ByteTrack ──► YOLOv8-Pose ──► Features ──► Classifier ──► Dashboard
-(feed)     (detect)    (track IDs)   (17-point      (geometric)  (trained)     (alerts)
-                                        skeleton)
-```
+---
 
-## Project Structure
+## System Capabilities & Key Features
 
-```
-capstone1/
-├── scripts/
-│   ├── extract_features.py      # Feature extraction pipeline (CURRENTLY RUNNING)
-│   └── parse_annotations.py     # Annotation coverage checker
-├── docs/
-│   ├── PRD.md                   # Product requirements document
-│   ├── ROADMAP.md               # 3-day development roadmap
-│   ├── CLAUDE.md                 # AI assistant guidance
-│   ├── project.md                # Project synopsis
-│   └── normal_files_to_extract.txt  # Reference list of extracted Normal clips
-├── .planning/                   # GSD workflow planning directory
-│   ├── PROJECT.md
-│   ├── REQUIREMENTS.md
-│   ├── ROADMAP.md
-│   ├── STATE.md
-│   └── config.json
-├── dataset/                     # Extracted UCF-Crime subset (6GB, gitignored)
-├── .gitignore
-├── requirements.txt
-└── README.md
-```
+### 1. Multi-Threaded Camera Architecture
+*   **Asynchronous Frame Reading:** Captures frames independently via high-performance python threading (`ThreadedCamera`), avoiding sequential frame capture lag or UI freezes.
+*   **Robust Multi-Camera Tracking:** Dynamically resolves tracker ID conflicts across multiple feeds simultaneously by isolating states uniquely using camera-to-person composites `(camera_id, track_id)`.
 
-## Quick Start
+### 2. 3D-CNN Action Classification (CLIP Model)
+*   **3D ResNet-18 Action Classifier:** Real-time sliding window classification on a buffer of 16 video frames using the custom-trained PyTorch 3D-CNN model (`models/clip_classifier_best.pt`).
+*   **Action Probability Alerts:** Instantly flags suspicious body language and motion patterns that indicate theft, providing confidence probability scores.
+
+### 3. Advanced Behavior & Posture Estimation
+*   **Item Concealment Logic:** Recognizes when a person picks up a target retail item and monitors hand-to-pocket/bag gestures, flagging potential concealment attempts.
+*   **Loitering Detection:** Evaluates how long a person dwells within a specific ROI. If loitering exceeds the configurable threshold, an alarm is triggered.
+*   **Zone Intrusion Alerts:** Instantly sounds sirens if human wrists cross into high-security zones (e.g., cash register areas, restricted aisles).
+*   **Postural Suspicion:** Detects unusual physical behavior such as sudden bending down in low-visibility aisles.
+*   **Activity Heatmaps:** Localized heatmap accumulators aggregate and visually plot customer traffic patterns individually for each camera stream.
+
+### 4. Interactive Canvas ROI Drawer
+*   **HTML5 Canvas Drawing Tool:** Draw precise security boundaries (Polygons) overlaying live webcam/RTSP feeds directly inside a glassmorphic dashboard modal.
+*   **Resolution-Agnostic Scaling:** Autonomously maps client-side mouse vectors into exact `1280x720` surveillance matrix coordinates, preventing scaling discrepancies across different screen resolutions.
+*   **Camera-Specific Storage:** Camera definitions and their respective ROI coordinate lists are saved persistently inside `cameras.json`.
+
+### 5. Facial Recognition & Database Panel
+*   **Face ID Classification:** A dedicated, premium **Face Management** panel to upload portrait photos, register new faces, and assign categorizations:
+    *   **Blacklist:** Automatically triggers high-priority security alarms and records evidence.
+    *   **VIP Whitelist:** Identifies trusted staff, loyal clients, or VIP visitors, showing a green greeting badge.
+*   **Instant Face Database Deletion:** One-click instant SQLite deletion with automatic memory synchronization.
+
+### 6. Client-Side Synthetic Audio Siren & Notifications
+*   **Web Audio API Integration:** Avoids brittle MP3 loading loops by synthesizing realistic, sweeping emergency sirens directly in the browser's audio processor in real-time when alarms fire.
+*   **High-Priority Cooldowns:** Protects users from noise fatigue by enforcing a 3-second smart alarm cooldown period.
+*   **Telegram & SMTP Setup:** Instantly broadcast alerts and snapshots via Telegram chat integrations and automated Email notifications.
+
+---
+
+## Technical Architecture
+
+*   **Backend Engine:** Python 3.10+, FastAPI (Asynchronous API endpoints & WebSockets), OpenCV (Multi-threaded streaming), Ultralytics YOLOv8 (Stand-alone Pose & Object model detection), PyTorch + Torchvision (3D ResNet-18 Action Classifier), `face_recognition` (Dlib-based CNN face encodings), SQLite3 (Database storage for logs & face matrices).
+*   **Frontend Dashboard:** Next.js 14+ (App Router), React 18, Tailwind CSS, Recharts (Modern chart libraries), Lucide React (Fluent vector icons), HSL Custom Themes (Harmonious Glassmorphic Dark UI).
+
+---
+
+## Installation Guide
+
+### Prerequisites
+*   Python 3.9 - 3.11
+*   Node.js (LTS version)
+*   CUDA Enabled NVIDIA GPU (Highly recommended for fluid real-time inference)
+
+### 1. Backend Configuration
+Install the Python dependencies:
 
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt --break-system-packages
-
-# 2. Check annotation coverage
-python3 scripts/parse_annotations.py
-
-# 3. Extract features (adjust --frame_stride for speed)
-python3 scripts/extract_features.py \
-    --dataset_dir ./dataset \
-    --annotation_file Temporal_Anomaly_Annotation.txt \
-    --output_csv features.csv \
-    --frame_stride 3
-
-# 4. Train classifier (coming in Phase 2)
-# 5. Launch dashboard (coming in Phase 3)
+pip install -r requirements.txt
 ```
 
-## Tech Stack
+#### Required Models
+The system uses the following pre-trained models:
+- `models/clip_classifier_best.pt` — Custom-trained 3D-CNN (ResNet-3D) action classifier.
+- `yolov8n.pt` — Object detection (person tracking, item monitoring)
+- `yolov8n-pose.pt` — Pose estimation (posture analysis, gesture detection)
 
-| Category | Technology |
-|---|---|
-| Language | Python 3.10+ |
-| Vision | OpenCV, Ultralytics YOLOv8 / YOLOv8-Pose |
-| Tracking | ByteTrack (via Ultralytics) |
-| Backend | FastAPI + WebSocket |
-| Classifier | scikit-learn (logistic regression / MLP) |
-| Frontend | HTML5, CSS3, JavaScript |
-| Storage | SQLite |
+### 2. Dashboard UI Configuration
+Install node packages:
 
-## Key Design Decisions
+```bash
+cd dashboard
+npm install
+```
 
-- **Only the classifier is custom-trained.** Detection, pose, and tracking use pretrained models (COCO weights).
-- **Features are normalized** by person bounding-box height for scale invariance.
-- **COCO holdable-object classes** stand in for "retail products" (documented limitation).
-- **Cart detection** is simplified to a fixed polygon (not learned).
-- **Train/eval split is by video, not by frame** to prevent data leakage.
+### 3. Verify Installation
+Run the setup tests to confirm everything is working:
 
-## Dataset
+```bash
+python test_setup.py      # Tests OpenCV + YOLO object detection
+python test_pose.py       # Tests YOLO pose model loading
+```
 
-Uses the **UCF-Crime** dataset (Sultani et al., CVPR 2018) — Shoplifting + Normal subsets only.
-- 21 Shoplifting clips have frame-level theft window annotations
-- ~29 additional Shoplifting clips have weak video-level labels only (excluded from training)
-- 145 Normal clips provide negative examples
+---
 
-> **⚠️ This is a capstone prototype, not a production system.** Dataset limitations are documented transparently.
+## Running the System
+
+### Automatic Startup
+Launch both the FastAPI service and the Next.js development server concurrently:
+
+```bash
+start_system.bat
+```
+
+### Manual Startup
+**1. Start the API Server & Inference Loop:**
+```bash
+python backend.py
+```
+*(The server will boot on `http://localhost:8000` — Swagger docs at `http://localhost:8000/docs`)*
+
+**2. Start the Frontend Dashboard:**
+```bash
+cd dashboard
+npm run dev
+```
+*(The panel will be served on `http://localhost:3000`)*
+
+**3. Optional Standalone OpenCV Window Demo:**
+```bash
+python standalone_demo.py
+```
+
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) (if applicable)
+Distributed under the MIT License. See `LICENSE` for more information.

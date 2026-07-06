@@ -2,10 +2,12 @@
 Parses UCF-Crime Temporal_Anomaly_Annotation.txt and produces a clean
 label lookup for videos present in your local dataset folder.
 """
+
 import os
 
 ANNOTATION_FILE = "Temporal_Anomaly_Annotation.txt"
 DATASET_DIR = "dataset"  # adjust to your actual extracted dataset path
+
 
 def parse_annotations(path):
     entries = {}
@@ -24,6 +26,7 @@ def parse_annotations(path):
             }
     return entries
 
+
 def find_local_videos(dataset_dir):
     found = {}
     for root, _, files in os.walk(dataset_dir):
@@ -31,6 +34,7 @@ def find_local_videos(dataset_dir):
             if f.endswith(".mp4"):
                 found[f] = os.path.join(root, f)
     return found
+
 
 if __name__ == "__main__":
     annotations = parse_annotations(ANNOTATION_FILE)
@@ -55,5 +59,7 @@ if __name__ == "__main__":
         segs_str = ", ".join(f"{s}-{e}" for s, e in segs if s != -1)
         print(f"  {fname}: theft frames {segs_str}")
 
-    print(f"\nShoplifting WITHOUT annotations (weak label only): {len(shoplifting_unannotated)}")
+    print(
+        f"\nShoplifting WITHOUT annotations (weak label only): {len(shoplifting_unannotated)}"
+    )
     print(f"\nNormal videos (all frames negative): {len(normal_videos)}")

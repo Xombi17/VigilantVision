@@ -48,8 +48,8 @@ import torch.nn.functional as F
 random.seed(42)
 torch.manual_seed(42)
 
-NUM_FRAMES = 16       # frames sampled per clip, matches typical Kinetics protocol
-FRAME_SIZE = 112       # r3d_18 expects 112x112 input
+NUM_FRAMES = 16  # frames sampled per clip, matches typical Kinetics protocol
+FRAME_SIZE = 112  # r3d_18 expects 112x112 input
 
 
 def load_manifest(path):
@@ -95,22 +95,27 @@ class ClipDataset(Dataset):
             indices = torch.linspace(0, total_frames - 1, NUM_FRAMES).long()
         else:
             # pad by repeating the last frame if the clip is short
-            indices = torch.cat([
-                torch.arange(total_frames),
-                torch.full((NUM_FRAMES - total_frames,), total_frames - 1),
-            ]).long()
+            indices = torch.cat(
+                [
+                    torch.arange(total_frames),
+                    torch.full((NUM_FRAMES - total_frames,), total_frames - 1),
+                ]
+            ).long()
 
-        frames = video[indices].float() / 255.0          # (T, H, W, C)
-        frames = frames.permute(0, 3, 1, 2)               # (T, C, H, W)
-        frames = F.interpolate(frames, size=(FRAME_SIZE, FRAME_SIZE),
-                                mode="bilinear", align_corners=False)
+        frames = video[indices].float() / 255.0  # (T, H, W, C)
+        frames = frames.permute(0, 3, 1, 2)  # (T, C, H, W)
+        frames = F.interpolate(
+            frames, size=(FRAME_SIZE, FRAME_SIZE), mode="bilinear", align_corners=False
+        )
 
         # Kinetics-400 normalization stats
         mean = torch.tensor([0.43216, 0.394666, 0.37645]).view(3, 1, 1)
         std = torch.tensor([0.22803, 0.22145, 0.216989]).view(3, 1, 1)
         frames = (frames - mean) / std
 
-        clip_tensor = frames.permute(1, 0, 2, 3)          # (C, T, H, W) — model's expected layout
+        clip_tensor = frames.permute(
+            1, 0, 2, 3
+        )  # (C, T, H, W) — model's expected layout
         return clip_tensor, torch.tensor(label, dtype=torch.float32)
 
 
@@ -160,9 +165,13 @@ def main():
 
     rows = load_manifest(args.manifest)
     train_rows, val_rows = video_level_split(rows, val_fraction=0.2)
-    print(f"Train clips: {len(train_rows)} (from distinct videos) | Val clips: {len(val_rows)}")
+    print(
+        f"Train clips: {len(train_rows)} (from distinct videos) | Val clips: {len(val_rows)}"
+    )
 
-    val_loader = DataLoader(ClipDataset(val_rows), batch_size=args.batch_size, shuffle=False)
+    val_loader = DataLoader(
+        ClipDataset(val_rows), batch_size=args.batch_size, shuffle=False
+    )
 
     # --- Model: transfer learning from Kinetics-400 ---
     weights = R3D_18_Weights.KINETICS400_V1
@@ -189,7 +198,9 @@ def main():
     for epoch in range(1, args.epochs + 1):
         model.train()
         epoch_rows = stratified_epoch_sample(train_rows, args.max_per_class_per_epoch)
-        train_loader = DataLoader(ClipDataset(epoch_rows), batch_size=args.batch_size, shuffle=True)
+        train_loader = DataLoader(
+            ClipDataset(epoch_rows), batch_size=args.batch_size, shuffle=True
+        )
 
         total_loss = 0.0
         for clips, labels in train_loader:
@@ -210,16 +221,21 @@ def main():
 
             # Calculate additional metrics
             from sklearn.metrics import precision_score, recall_score, f1_score
+
             try:
                 precision = precision_score(all_labels, all_preds, zero_division=0)
                 recall = recall_score(all_labels, all_preds, zero_division=0)
                 f1 = f1_score(all_labels, all_preds, zero_division=0)
-                print(f"Epoch {epoch}/{args.epochs} | loss={avg_loss:.4f} | "
-                      f"val_acc={val_acc:.3f} | prec={precision:.3f} | "
-                      f"rec={recall:.3f} | f1={f1:.3f}")
+                print(
+                    f"Epoch {epoch}/{args.epochs} | loss={avg_loss:.4f} | "
+                    f"val_acc={val_acc:.3f} | prec={precision:.3f} | "
+                    f"rec={recall:.3f} | f1={f1:.3f}"
+                )
             except Exception as e:
-                print(f"Epoch {epoch}/{args.epochs} | loss={avg_loss:.4f} | val_acc={val_acc:.3f} | "
-                      f"sklearn metrics unavailable: {e}")
+                print(
+                    f"Epoch {epoch}/{args.epochs} | loss={avg_loss:.4f} | val_acc={val_acc:.3f} | "
+                    f"sklearn metrics unavailable: {e}"
+                )
 
             if val_acc > best_val_acc:
                 best_val_acc = val_acc

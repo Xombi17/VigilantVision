@@ -73,20 +73,39 @@ def get_video_info(video_path):
     try:
         # Duration
         dur_result = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries",
-             "format=duration", "-of", "default=noprint_wrappers=1:nokey=1",
-             video_path],
-            capture_output=True, text=True, timeout=30,
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                video_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         duration = float(dur_result.stdout.strip())
 
         # Frame rate (as fraction like "30000/1001")
         fps_result = subprocess.run(
-            ["ffprobe", "-v", "error", "-select_streams", "v:0",
-             "-show_entries", "stream=r_frame_rate",
-             "-of", "default=noprint_wrappers=1:nokey=1",
-             video_path],
-            capture_output=True, text=True, timeout=30,
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=r_frame_rate",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                video_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         fps_str = fps_result.stdout.strip()
         if "/" in fps_str:
@@ -96,7 +115,12 @@ def get_video_info(video_path):
             fps = float(fps_str) if fps_str else 30.0
 
         return duration, fps
-    except (subprocess.TimeoutExpired, ValueError, FileNotFoundError, ZeroDivisionError):
+    except (
+        subprocess.TimeoutExpired,
+        ValueError,
+        FileNotFoundError,
+        ZeroDivisionError,
+    ):
         return None, None
 
 
@@ -104,12 +128,17 @@ def extract_clip(input_path, output_path, start_sec, duration_sec):
     """Extract a clip using ffmpeg (fast, no re-encode with copy)."""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     cmd = [
-        "ffmpeg", "-y",
-        "-ss", str(start_sec),
-        "-i", input_path,
-        "-t", str(duration_sec),
-        "-c", "copy",        # fast copy, no re-encode
-        "-an",               # no audio
+        "ffmpeg",
+        "-y",
+        "-ss",
+        str(start_sec),
+        "-i",
+        input_path,
+        "-t",
+        str(duration_sec),
+        "-c",
+        "copy",  # fast copy, no re-encode
+        "-an",  # no audio
         output_path,
     ]
     try:
@@ -124,10 +153,18 @@ def main():
     parser.add_argument("--dataset_dir", default="./dataset")
     parser.add_argument("--annotation_file", default="Temporal_Anomaly_Annotation.txt")
     parser.add_argument("--output_dir", default="clips")
-    parser.add_argument("--clip_duration", type=float, default=4.5,
-                        help="Duration of each clip in seconds")
-    parser.add_argument("--max_clips_per_video", type=int, default=5,
-                        help="Max clips to extract from a single video")
+    parser.add_argument(
+        "--clip_duration",
+        type=float,
+        default=4.5,
+        help="Duration of each clip in seconds",
+    )
+    parser.add_argument(
+        "--max_clips_per_video",
+        type=int,
+        default=5,
+        help="Max clips to extract from a single video",
+    )
     args = parser.parse_args()
 
     # 1 --- Load annotations and find local videos
@@ -138,8 +175,8 @@ def main():
     # 2 --- Determine which videos to process
     # Positive: Shoplifting clips WITH frame-level annotations
     # Negative: Normal clips
-    pos_videos = []    # (filename, path, segments)
-    neg_videos = []    # (filename, path)
+    pos_videos = []  # (filename, path, segments)
+    neg_videos = []  # (filename, path)
 
     for fname, path in local_videos.items():
         if fname in annotations:
@@ -203,7 +240,9 @@ def main():
                 manifest_rows.append((clip_path, 1, fname))
                 clip_idx += 1
                 clips_from_video += 1
-                print(f"  [{clip_idx}] {fname} @ {clip_start:.1f}s (theft window {seg_start}-{seg_end})")
+                print(
+                    f"  [{clip_idx}] {fname} @ {clip_start:.1f}s (theft window {seg_start}-{seg_end})"
+                )
             else:
                 print(f"  [fail] {fname}")
 
@@ -247,12 +286,12 @@ def main():
     # Summary
     pos_count = sum(1 for r in manifest_rows if r[1] == 1)
     neg_count = sum(1 for r in manifest_rows if r[1] == 0)
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Done! Created {len(manifest_rows)} clips:")
     print(f"    Positive: {pos_count}")
     print(f"    Negative: {neg_count}")
     print(f"    Manifest: {manifest_path}")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
 
 
 if __name__ == "__main__":

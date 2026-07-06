@@ -33,10 +33,29 @@ LEFT_WRIST, RIGHT_WRIST = 9, 10
 # COCO classes we treat as "holdable / product-like" items.
 # Curated to reduce noise from irrelevant classes (cars, traffic lights, etc).
 ITEM_CLASS_NAMES = {
-    "backpack", "umbrella", "handbag", "suitcase", "bottle", "wine glass",
-    "cup", "banana", "apple", "sandwich", "orange", "book", "vase",
-    "scissors", "teddy bear", "toothbrush", "cell phone", "remote",
-    "keyboard", "mouse", "laptop", "bowl", "clock",
+    "backpack",
+    "umbrella",
+    "handbag",
+    "suitcase",
+    "bottle",
+    "wine glass",
+    "cup",
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "book",
+    "vase",
+    "scissors",
+    "teddy bear",
+    "toothbrush",
+    "cell phone",
+    "remote",
+    "keyboard",
+    "mouse",
+    "laptop",
+    "bowl",
+    "clock",
 }
 
 
@@ -76,8 +95,16 @@ def dist(p1, p2):
     return float(np.hypot(p1[0] - p2[0], p1[1] - p2[1]))
 
 
-def process_video(video_path, video_label, segments, pose_model, item_model,
-                   frame_stride, writer, video_name):
+def process_video(
+    video_path,
+    video_label,
+    segments,
+    pose_model,
+    item_model,
+    frame_stride,
+    writer,
+    video_name,
+):
     import cv2
 
     cap = cv2.VideoCapture(video_path)
@@ -99,7 +126,10 @@ def process_video(video_path, video_label, segments, pose_model, item_model,
 
         # --- Person detection + pose + tracking ---
         pose_results = pose_model.track(
-            frame, persist=True, verbose=False, classes=[0]  # class 0 = person
+            frame,
+            persist=True,
+            verbose=False,
+            classes=[0],  # class 0 = person
         )
 
         # --- Item detection (no tracking needed, just per-frame boxes) ---
@@ -148,31 +178,56 @@ def process_video(video_path, video_label, segments, pose_model, item_model,
                 else:
                     person_height = 1.0
 
-                wrist_to_torso = min(
-                    dist(lw, torso_center) if not np.all(lw == 0) else 1e6,
-                    dist(rw, torso_center) if not np.all(rw == 0) else 1e6,
-                ) / person_height
+                wrist_to_torso = (
+                    min(
+                        dist(lw, torso_center) if not np.all(lw == 0) else 1e6,
+                        dist(rw, torso_center) if not np.all(rw == 0) else 1e6,
+                    )
+                    / person_height
+                )
 
                 if item_boxes:
-                    wrist_to_item = min(
-                        min(dist(lw, ib) for ib in item_boxes) if not np.all(lw == 0) else 1e6,
-                        min(dist(rw, ib) for ib in item_boxes) if not np.all(rw == 0) else 1e6,
-                    ) / person_height
+                    wrist_to_item = (
+                        min(
+                            min(dist(lw, ib) for ib in item_boxes)
+                            if not np.all(lw == 0)
+                            else 1e6,
+                            min(dist(rw, ib) for ib in item_boxes)
+                            if not np.all(rw == 0)
+                            else 1e6,
+                        )
+                        / person_height
+                    )
                 else:
                     wrist_to_item = 1e6  # no items detected this frame
 
                 num_items_nearby = sum(
-                    1 for ib in item_boxes
-                    if dist(lw, ib) / person_height < 1.5 or dist(rw, ib) / person_height < 1.5
+                    1
+                    for ib in item_boxes
+                    if dist(lw, ib) / person_height < 1.5
+                    or dist(rw, ib) / person_height < 1.5
                 )
 
-                label = 1 if (video_label == "Shoplifting" and frame_is_positive(frame_idx, segments)) else 0
+                label = (
+                    1
+                    if (
+                        video_label == "Shoplifting"
+                        and frame_is_positive(frame_idx, segments)
+                    )
+                    else 0
+                )
 
-                writer.writerow([
-                    video_name, frame_idx, track_id,
-                    round(wrist_to_torso, 4), round(wrist_to_item, 4),
-                    num_items_nearby, label,
-                ])
+                writer.writerow(
+                    [
+                        video_name,
+                        frame_idx,
+                        track_id,
+                        round(wrist_to_torso, 4),
+                        round(wrist_to_item, 4),
+                        num_items_nearby,
+                        label,
+                    ]
+                )
                 rows_written += 1
 
         frame_idx += 1
@@ -186,9 +241,15 @@ def main():
     parser.add_argument("--dataset_dir", default="dataset")
     parser.add_argument("--annotation_file", default="Temporal_Anomaly_Annotation.txt")
     parser.add_argument("--output_csv", default="features.csv")
-    parser.add_argument("--frame_stride", type=int, default=3,
-                         help="Process every Nth frame (higher = faster, less data)")
-    parser.add_argument("--skip_unannotated_shoplifting", action="store_true", default=True)
+    parser.add_argument(
+        "--frame_stride",
+        type=int,
+        default=3,
+        help="Process every Nth frame (higher = faster, less data)",
+    )
+    parser.add_argument(
+        "--skip_unannotated_shoplifting", action="store_true", default=True
+    )
     args = parser.parse_args()
 
     print("Loading models (will auto-download pretrained weights on first run)...")
@@ -214,17 +275,29 @@ def main():
     total_rows = 0
     with open(args.output_csv, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "video_name", "frame_idx", "track_id",
-            "wrist_to_torso_norm", "wrist_to_item_norm",
-            "num_items_nearby", "label",
-        ])
+        writer.writerow(
+            [
+                "video_name",
+                "frame_idx",
+                "track_id",
+                "wrist_to_torso_norm",
+                "wrist_to_item_norm",
+                "num_items_nearby",
+                "label",
+            ]
+        )
 
         for i, (fname, path, label, segments) in enumerate(to_process):
-            print(f"[{i+1}/{len(to_process)}] {fname} ({label})...")
+            print(f"[{i + 1}/{len(to_process)}] {fname} ({label})...")
             rows = process_video(
-                path, label, segments, pose_model, item_model,
-                args.frame_stride, writer, fname,
+                path,
+                label,
+                segments,
+                pose_model,
+                item_model,
+                args.frame_stride,
+                writer,
+                fname,
             )
             total_rows += rows
             print(f"    -> {rows} rows")

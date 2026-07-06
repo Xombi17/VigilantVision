@@ -6,7 +6,7 @@ A 3-day capstone prototype: real-time retail-theft detection using pretrained YO
 
 ## Phase 1 — Environment & Data
 
-**Status:** Mostly complete (data extracted, awaiting environment setup)
+**Status:** ✅ Complete
 
 **Goals:** Get the pipeline environment ready and sanity-check the detection/tracking stack.
 
@@ -19,18 +19,18 @@ A 3-day capstone prototype: real-time retail-theft detection using pretrained YO
 **Files:**
 - `parse_annotations.py` ✓
 - `extract_features.py` ✓
-- Environment install (ultralytics, opencv, fastapi, etc.)
-- Sanity-check pipeline on one sample video
+- Environment install (ultralytics, opencv, fastapi, etc.) ✓
+- Sanity-check pipeline on one sample video ✓
 
 ### Plans
-- **01-01:** Install Python dependencies (`pip install ultralytics opencv-python fastapi uvicorn scikit-learn`)
-- **01-02:** Run YOLOv8n + YOLOv8-Pose + ByteTrack on one sample video to verify end-to-end detection/tracking/pose works
+- **01-01:** Install Python dependencies (`pip install ultralytics opencv-python fastapi uvicorn scikit-learn`) ✓
+- **01-02:** Run YOLOv8n + YOLOv8-Pose + ByteTrack on one sample video to verify end-to-end detection/tracking/pose works ✓
 
 ---
 
 ## Phase 2 — Feature Extraction & Classifier Training
 
-**Status:** Not started
+**Status:** ✅ Complete
 
 **Goals:** Extract geometric features from all annotated clips, train + evaluate the lightweight classifier.
 
@@ -41,21 +41,21 @@ A 3-day capstone prototype: real-time retail-theft detection using pretrained YO
 **Success Criteria:** Classifier shows meaningfully better-than-chance separation (report precision/recall/ROC-AUC honestly)
 
 **Files:**
-- `extract_features.py`
-- `features.csv` (generated)
-- Classifier training script
+- `extract_features.py` ✓
+- `features.csv` (generated) ✓
+- Classifier training script (`train_tabular_classifier.py`) ✓
 
 ### Plans
-- **02-01:** Run `extract_features.py` across all annotated Shoplifting + Normal clips (tune `--frame_stride`)
-- **02-02:** Train logistic regression / small MLP on `features.csv` with leave-some-videos-out split
-- **02-03:** Evaluate and report metrics honestly; tune heuristic thresholds as fallback
+- **02-01:** Run `extract_features.py` across all annotated Shoplifting + Normal clips (tune `--frame_stride`) ✓
+- **02-02:** Train logistic regression / small MLP on `features.csv` with leave-some-videos-out split ✓
+- **02-03:** Evaluate and report metrics honestly; tune heuristic thresholds as fallback ✓
 - **02-04:** (Stretch) Add velocity-based features over sliding window
 
 ---
 
 ## Phase 3 — Dashboard, Integration & Demo
 
-**Status:** Not started
+**Status:** 🚧 In Progress
 
 **Goals:** Build the FastAPI dashboard with live video, alerts, and incident logging. Wire the full pipeline together.
 
