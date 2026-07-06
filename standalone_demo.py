@@ -359,7 +359,17 @@ def main():
             2,
         )
 
-        cv2.imshow(window_name, frame)
+        # Resize frame to a comfortable size for viewing if it is too small
+        h, w = frame.shape[:2]
+        target_width = 1024
+        if w < target_width:
+            scale = target_width / w
+            target_height = int(h * scale)
+            display_frame = cv2.resize(frame, (target_width, target_height))
+        else:
+            display_frame = frame
+
+        cv2.imshow(window_name, display_frame)
         frame_count += 1
 
         if cv2.waitKey(1) & 0xFF == ord("q"):

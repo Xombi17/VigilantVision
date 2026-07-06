@@ -107,6 +107,7 @@ def video_loop():
                         "cameras": frames_payload,
                         "alert": alert_payload,
                         "audio": "siren" if alert_payload else None,
+                        "frame_count": frame_count,
                     }
 
         except Exception as e:
@@ -122,30 +123,46 @@ def video_loop():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("Dashboard UI client connected to WebSocket.")
+
+    async def receive_loop():
+        try:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            pass
+
+    rx_task = asyncio.create_task(receive_loop())
+    last_sent_frame = -1
+
     try:
-        while True:
+        while not rx_task.done():
             message_to_send = None
             with lock:
-                if latest_frame:
+                if latest_frame and latest_frame.get("frame_count", -1) != last_sent_frame:
                     message_to_send = json.dumps(latest_frame)
+                    last_sent_frame = latest_frame.get("frame_count", -1)
 
             if message_to_send:
                 try:
                     await websocket.send_text(message_to_send)
-                except WebSocketDisconnect:
-                    raise
                 except Exception as send_err:
-                    print(f"WebSocket Send Error (client gone?): {send_err}")
+                    print(f"WebSocket Send Error: {send_err}")
                     break
             else:
-                # No new frame yet — yield control briefly instead of busy-spinning
                 await asyncio.sleep(0.01)
 
-            await asyncio.sleep(0.04)
-    except WebSocketDisconnect:
-        print("Dashboard UI client disconnected.")
+            await asyncio.sleep(0.03)
     except Exception as e:
-        print(f"WebSocket Error: {e}")
+        print(f"WebSocket Loop Error: {e}")
+    finally:
+        rx_task.cancel()
+        try:
+            await rx_task
+        except asyncio.CancelledError:
+            pass
+        print("Dashboard UI client disconnected.")
 
 
 
