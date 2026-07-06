@@ -8,8 +8,8 @@ load_dotenv()
 # File paths and constants
 SETTINGS_FILE = "settings.json"
 DB_NAME = "vigilant_vision.db"
-LOITERING_THRESHOLD = 5.0
-ALERT_COOLDOWN = 3.0
+LOITERING_THRESHOLD = 30.0  # seconds in ROI before loitering alert fires
+ALERT_COOLDOWN = 30.0       # minimum seconds between consecutive alerts per camera
 
 # Create alert folder
 if not os.path.exists("alerts"):

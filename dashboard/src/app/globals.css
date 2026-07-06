@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #0B0F19; /* Deep Slate Indigo */
+  --color-foreground: #F8FAFC;
+  --color-brand: #14b8a6; /* Neon Teal */
+  --color-brand-muted: rgba(20, 184, 166, 0.2);
+  --color-danger: #f43f5e; /* Coral / Rose */
+  --color-glass: rgba(17, 24, 39, 0.6);
+  --color-glass-hover: rgba(31, 41, 55, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --font-sans: var(--font-inter), sans-serif;
+  --font-heading: var(--font-outfit), sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(20, 184, 166, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.1) 0%, transparent 40%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+.glass-panel {
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.glass-header {
+  background: rgba(11, 15, 25, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-glass-border);
+}
+
+.alert-pulse {
+  animation: pulse-danger 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-danger {
+  0%, 100% {
+    border-color: rgba(244, 63, 94, 0.2);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4);
+  }
+  50% {
+    border-color: rgba(244, 63, 94, 0.8);
+    box-shadow: 0 0 20px 0 rgba(244, 63, 94, 0.6);
+  }
+}

@@ -63,7 +63,7 @@ def check_object_in_hand(keypoints, object_boxes, hand="LEFT"):
 
         dist = np.sqrt((wrist[0] - box_cx) ** 2 + (wrist[1] - box_cy) ** 2)
 
-        if dist < 120:  # Threshold
+        if dist < 60:  # Tight threshold — wrist must be very close to object centre
             return True
         if box[0] < wrist[0] < box[2] and box[1] < wrist[1] < box[3]:
             return True

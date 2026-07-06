@@ -99,18 +99,17 @@ class SurveillanceEngine:
         cam_roi = cam_data.get("roi_points", [])
 
         # --- 3D-CNN CLIP Classifier Inference ---
+        # We accumulate frames and only fire when the rolling average is
+        # consistently high — prevents single-frame noise spikes from triggering.
+        # NOTE: Thresholds are intentionally strict — the model fires false positives
+        # on normal webcam footage; we want it to be very conservative.
+        CLIP_THRESHOLD = 0.92          # only trigger if single-frame conf is very high
+        CLIP_HISTORY_LEN = 8           # number of consecutive readings needed
+        CLIP_HISTORY_THRESHOLD = 0.88  # AND the rolling average must be >= 0.88
+
         clip_confidence = cam_data.get("last_clip_confidence", 0.0)
         if self.clip_model is not None:
             try:
-                # Check if any tracked person on this camera is currently identified as VIP
-                vip_present = False
-                for state_key, p_state_check in person_states.items():
-                    if state_key[0] == cam_id and getattr(
-                        p_state_check, "is_vip", False
-                    ):
-                        vip_present = True
-                        break
-
                 if cam_id not in self.clip_buffers:
                     self.clip_buffers[cam_id] = []
                 resized_f = cv2.resize(frame, (112, 112))
@@ -140,24 +139,25 @@ class SurveillanceEngine:
                         clip_confidence = float(torch.sigmoid(logits).item())
                         cam_data["last_clip_confidence"] = clip_confidence
 
-                if clip_confidence > 0.6 and not vip_present:
-                    cv2.putText(
-                        frame,
-                        f"THEFT DETECTED (3D-CNN: {clip_confidence:.2f})",
-                        (50, 150),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 0, 255),
-                        3,
+                        # Maintain rolling history for this camera
+                        if "clip_confidence_history" not in cam_data:
+                            cam_data["clip_confidence_history"] = []
+                        cam_data["clip_confidence_history"].append(clip_confidence)
+                        if len(cam_data["clip_confidence_history"]) > CLIP_HISTORY_LEN:
+                            cam_data["clip_confidence_history"].pop(0)
+
+                # NOTE: VIP check happens AFTER pose loop has populated person_states.
+                # We store a pending clip alert flag here and resolve it later.
+                if clip_confidence > CLIP_THRESHOLD:
+                    history = cam_data.get("clip_confidence_history", [])
+                    avg_conf = sum(history) / len(history) if history else clip_confidence
+                    cam_data["_pending_clip_alert"] = (
+                        avg_conf >= CLIP_HISTORY_THRESHOLD,
+                        clip_confidence,
                     )
-                    if current_time - cam_data["last_alert_time"] > ALERT_COOLDOWN:
-                        trigger_alert(
-                            cam_id,
-                            name,
-                            f"THEFT SUSPICION (3D-CNN Conf: {clip_confidence:.2f})",
-                            frame,
-                        )
-                        cam_data["last_alert_time"] = current_time
+                else:
+                    cam_data["_pending_clip_alert"] = (False, clip_confidence)
+
             except Exception as e:
                 print(f"3D-CNN inference error: {e}")
 
@@ -490,6 +490,34 @@ class SurveillanceEngine:
         if results_pose[0].keypoints is not None:
             res_plotted = results_pose[0].plot()
             frame = res_plotted
+
+        # --- Resolve pending 3D-CNN alert AFTER pose loop ---
+        # At this point person_states is fully updated, so VIP check is accurate.
+        pending_clip = cam_data.pop("_pending_clip_alert", (False, 0.0))
+        if pending_clip[0]:
+            vip_present = any(
+                state_key[0] == cam_id and getattr(p_state_check, "is_vip", False)
+                for state_key, p_state_check in person_states.items()
+            )
+            if not vip_present:
+                clip_conf_val = pending_clip[1]
+                cv2.putText(
+                    frame,
+                    f"THEFT DETECTED (3D-CNN: {clip_conf_val:.2f})",
+                    (50, 150),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.0,
+                    (0, 0, 255),
+                    3,
+                )
+                if current_time - cam_data["last_alert_time"] > ALERT_COOLDOWN:
+                    trigger_alert(
+                        cam_id,
+                        name,
+                        f"THEFT SUSPICION (3D-CNN Conf: {clip_conf_val:.2f})",
+                        frame,
+                    )
+                    cam_data["last_alert_time"] = current_time
 
         if len(cam_roi) > 0:
             cv2.polylines(
