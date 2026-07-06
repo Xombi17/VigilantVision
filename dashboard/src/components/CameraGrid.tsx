@@ -112,6 +112,22 @@ export default function CameraGrid() {
     const container = containerRef.current;
     if (!container) return;
 
+    // Dynamically adjust grid container class based on number of cameras
+    const count = cameras.length;
+    if (count === 1) {
+      container.className = "flex-1 flex items-center justify-center p-4 min-h-0";
+      container.style.gridTemplateColumns = "";
+    } else {
+      container.className = "flex-1 grid gap-4 p-4 min-h-0 items-center justify-center";
+      if (count === 2) {
+        container.style.gridTemplateColumns = "repeat(auto-fit, minmax(400px, 1fr))";
+      } else if (count <= 4) {
+        container.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
+      } else {
+        container.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+      }
+    }
+
     const existing = new Set(imgRefs.current.keys());
     const incoming = new Set(cameras.map((c) => c.id));
 
@@ -131,8 +147,15 @@ export default function CameraGrid() {
         // Build tile DOM manually — no React needed
         const tile = document.createElement("div");
         tile.dataset.cam = cam.id;
-        tile.className =
-          "cam-tile relative rounded-2xl overflow-hidden border border-glass-border bg-black flex-1";
+        
+        // Single camera uses h-full, multiple cameras use w-full with aspect-video to fit grid cells
+        if (count === 1) {
+          tile.className =
+            "cam-tile relative rounded-2xl overflow-hidden border border-glass-border bg-black aspect-video h-full max-w-full mx-auto shadow-2xl transition-all duration-300 hover:border-brand/40";
+        } else {
+          tile.className =
+            "cam-tile relative rounded-2xl overflow-hidden border border-glass-border bg-black aspect-video w-full max-w-full max-h-full mx-auto shadow-lg transition-all duration-300 hover:border-brand/40";
+        }
         tile.style.minHeight = "0";
         tile.style.minWidth = "0";
 
@@ -143,9 +166,12 @@ export default function CameraGrid() {
         header.innerHTML = `
           <div class="flex items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-            <span class="text-xs font-semibold">${cam.name}</span>
+            <span class="text-xs font-semibold text-foreground/90">${cam.name}</span>
           </div>
-          <span class="text-[10px] text-foreground/40 font-mono">LIVE</span>
+          <span class="text-[10px] text-foreground/50 font-mono flex items-center gap-1 font-semibold">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
+            LIVE
+          </span>
         `;
         tile.appendChild(header);
 
@@ -153,7 +179,6 @@ export default function CameraGrid() {
         const img = document.createElement("img");
         img.alt = cam.name;
         img.decoding = "async";
-        // object-cover fills the whole tile; the backend already mirrors the frame
         img.style.cssText =
           "width:100%;height:100%;object-fit:cover;display:block;";
         tile.appendChild(img);
@@ -162,18 +187,30 @@ export default function CameraGrid() {
         // Alert border overlay
         const alertBorder = document.createElement("div");
         alertBorder.style.cssText =
-          "display:none;position:absolute;inset:0;border:3px solid rgba(244,63,94,0.7);pointer-events:none;border-radius:1rem;z-index:20;";
+          "display:none;position:absolute;inset:0;border:3px solid rgba(244,63,94,0.8);pointer-events:none;border-radius:1rem;z-index:20;";
         tile.appendChild(alertBorder);
         alertDivRefs.current.set(cam.id, alertBorder);
 
         // Alert message banner
         const alertBanner = document.createElement("div");
         alertBanner.style.cssText =
-          "display:none;position:absolute;bottom:0;left:0;right:0;z-index:30;background:rgba(244,63,94,0.85);color:#fff;font-size:11px;font-weight:700;padding:6px 12px;align-items:center;gap:6px;";
+          "display:none;position:absolute;bottom:0;left:0;right:0;z-index:30;background:rgba(244,63,94,0.9);color:#fff;font-size:11px;font-weight:700;padding:8px 12px;align-items:center;gap:6px;backdrop-filter:blur(4px);";
         tile.appendChild(alertBanner);
         alertBannerRef.current.set(cam.id, alertBanner);
 
         container.appendChild(tile);
+      } else {
+        // If the camera count changed, update class on existing tiles
+        const tile = container.querySelector(`[data-cam="${cam.id}"]`);
+        if (tile) {
+          if (count === 1) {
+            tile.className =
+              "cam-tile relative rounded-2xl overflow-hidden border border-glass-border bg-black aspect-video h-full max-w-full mx-auto shadow-2xl transition-all duration-300 hover:border-brand/40";
+          } else {
+            tile.className =
+              "cam-tile relative rounded-2xl overflow-hidden border border-glass-border bg-black aspect-video w-full max-w-full max-h-full mx-auto shadow-lg transition-all duration-300 hover:border-brand/40";
+          }
+        }
       }
     });
   }, []);
